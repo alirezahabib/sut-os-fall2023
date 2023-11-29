@@ -48,6 +48,28 @@ int cmd_pwd(tok_t arg[]) {
     return 1;
 }
 
+void execute_external_command(tok_t arg[]) {
+    pid_t pid, wpid;
+    int status;
+
+    pid = fork();
+    if (pid == 0) {
+        // Child process
+        if (execvp(arg[0], arg) == -1) {
+            perror("execvp");
+            exit(EXIT_FAILURE);
+        }
+    } else if (pid < 0) {
+        // Fork failed
+        perror("fork");
+    } else {
+        // Parent process
+        do {
+            wpid = waitpid(pid, &status, WUNTRACED);
+        } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+    }
+}
+
 
 /* Command Lookup table */
 typedef int cmd_fun_t(tok_t args[]); /* cmd functions take token array and return int */
@@ -144,7 +166,7 @@ int shell(int argc, char *argv[]) {
         fundex = lookup(t[0]); /* Is first token a shell literal */
         if (fundex >= 0) cmd_table[fundex].fun(&t[1]);
         else {
-            fprintf(stdout, "This shell only supports built-ins. Replace this to run programs as commands.\n");
+            execute_external_command(t);
         }
         // fprintf(stdout, "%d: ", lineNum);
     }
