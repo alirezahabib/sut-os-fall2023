@@ -1,0 +1,3 @@
+/usr/bin/touch file1
+/usr/bin/wc file1
+/bin/rm file1

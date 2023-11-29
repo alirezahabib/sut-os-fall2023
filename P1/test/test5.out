@@ -1,0 +1,6 @@
+CMD
+python3.9 tester.py
+./shell
+/usr/bin/sleep 2
+/usr/bin/ps -o cmd
+hey

@@ -1,0 +1,6 @@
+echo salam > file3
+cat file3
+wc < file3 > file4
+cat file4
+rm file3
+rm file4

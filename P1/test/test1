@@ -1,0 +1,6 @@
+cd /tmp
+pwd
+cd ..
+pwd
+cd /proc/fs
+pwd

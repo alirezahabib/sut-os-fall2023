@@ -1,0 +1,3 @@
+touch file2
+wc file2
+rm file2

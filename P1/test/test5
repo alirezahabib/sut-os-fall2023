@@ -1,0 +1,4 @@
+/usr/bin/sleep 2 &
+/usr/bin/ps -o cmd
+wait
+echo hey
