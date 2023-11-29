@@ -7,7 +7,6 @@
 #include <termios.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <limits.h>
 
 #define FALSE 0
 #define TRUE 1
@@ -17,6 +16,8 @@
 #include "parse.h"
 #include "process.h"
 #include "shell.h"
+
+#include <limits.h>
 
 int cmd_quit(tok_t arg[]) {
     printf("Bye\n");
