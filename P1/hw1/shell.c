@@ -19,6 +19,9 @@
 
 #include <limits.h>
 
+process *create_process(tok_t *inputString);
+void add_process(process *p);
+
 int cmd_quit(tok_t arg[]) {
     printf("Bye\n");
     exit(0);
@@ -28,46 +31,61 @@ int cmd_quit(tok_t arg[]) {
 int cmd_help(tok_t arg[]);
 
 int cmd_cd(tok_t arg[]) {
-    if (arg[0] == NULL) {
-        fprintf(stderr, "cd: missing argument\n");
-    } else {
-        if (chdir(arg[0]) != 0) {
-            perror("cd");
-        }
-    }
+    if (arg[0] == NULL) fprintf(stderr, "cd: missing argument\n");
+    else if (chdir(arg[0]) != 0) perror("cd");
     return 1;
 }
 
 int cmd_pwd(tok_t arg[]) {
     char cwd[PATH_MAX];
-    if (getcwd(cwd, sizeof(cwd)) != NULL) {
-        printf("%s\n", cwd);
-    } else {
-        perror("getcwd");
-    }
+    if (getcwd(cwd, sizeof(cwd)) != NULL) printf("%s\n", cwd);
+    else perror("getcwd");
     return 1;
 }
 
-void execute_external_command(tok_t arg[]) {
-    pid_t pid, wpid;
-    int status;
+process *find_process(int pid) {
+    process *p = first_process;
 
+    do if (p->pid == pid) return p;
+    while ((p = p->next));
+
+    return NULL;
+}
+
+void external_cmd(tok_t arg[]) {
+    process *new_process = create_process(arg);
+    add_process(new_process);
+
+    int pid;
     pid = fork();
     if (pid == 0) {
-        // Child process
-        if (execvp(arg[0], arg) == -1) {
-            perror("execvp");
-            exit(EXIT_FAILURE);
+        // child
+        signal(SIGINT, SIG_DFL);
+        signal(SIGQUIT, SIG_DFL);
+        signal(SIGTSTP, SIG_DFL);
+        signal(SIGTTIN, SIG_DFL);
+        signal(SIGTTOU, SIG_DFL);
+
+        new_process->pid = getpid();
+        printf("child id: %d", new_process->pid);
+        launch_process(new_process);
+    } else if (pid > 0) {
+        // parent
+        new_process->pid = pid;
+        int parentPID = getpid();
+
+        setpgid(parentPID, parentPID);
+        if (!new_process->background) {
+            tcsetpgrp(STDIN_FILENO, parentPID);
+            int *status;
+            waitpid(pid, status, 2);
+
+            process *child = find_process(pid);
+            if (child != NULL) {
+                child->completed = TRUE;
+            }
         }
-    } else if (pid < 0) {
-        // Fork failed
-        perror("fork");
-    } else {
-        // Parent process
-        do {
-            wpid = waitpid(pid, &status, WUNTRACED);
-        } while (!WIFEXITED(status) && !WIFSIGNALED(status));
-    }
+    } else perror("fork");
 }
 
 
@@ -127,22 +145,44 @@ void init_shell() {
         tcsetpgrp(shell_terminal, shell_pgid);
         tcgetattr(shell_terminal, &shell_tmodes);
     }
-    /** YOUR CODE HERE */
+    first_process = create_process(NULL);
 }
 
 /**
  * Add a process to our process list
  */
 void add_process(process *p) {
-    /** YOUR CODE HERE */
+    process *last_process = first_process;
+
+    // Forward to the last process
+    while (last_process->next) last_process = last_process->next;
+
+    // Ex-
+    last_process->next = p;
+    p->prev = last_process;
 }
 
 /**
  * Creates a process given the inputString from stdin
  */
-process *create_process(char *inputString) {
-    /** YOUR CODE HERE */
-    return NULL;
+process *create_process(tok_t *inputString) {
+    process *p = malloc(sizeof(process));
+
+    // In order of declaration
+    p->argv = inputString;
+    p->argc = sizeof(inputString) / sizeof(tok_t);
+    p->pid = getpid();
+    p->completed = FALSE;
+    p->stopped = FALSE;
+    p->background = FALSE;
+    p->status = 0;
+    p->stdin = STDIN_FILENO;
+    p->stdout = STDOUT_FILENO;
+    p->stderr = STDERR_FILENO;
+    p->next = NULL;
+    p->prev = NULL;
+
+    return p;
 }
 
 
@@ -165,9 +205,7 @@ int shell(int argc, char *argv[]) {
         t = getToks(s); /* break the line into tokens */
         fundex = lookup(t[0]); /* Is first token a shell literal */
         if (fundex >= 0) cmd_table[fundex].fun(&t[1]);
-        else {
-            execute_external_command(t);
-        }
+        else if (t[0]) external_cmd(t);
         // fprintf(stdout, "%d: ", lineNum);
     }
     return 0;
