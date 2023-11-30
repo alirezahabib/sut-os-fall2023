@@ -20,7 +20,7 @@ typedef struct process {
     struct process *prev;
 } process;
 
-process *first_process; //pointer to the first process that is launched */
+process *first_process; /* pointer to the first process that is launched */
 
 void launch_process(process *p);
 

@@ -81,8 +81,8 @@ typedef struct fun_desc {
 fun_desc_t cmd_table[] = {
         {cmd_help, "?",    "show this help menu"},
         {cmd_quit, "quit", "quit the command shell"},
-        {cmd_pwd,  "pwd",  "print the current directory"},
-        {cmd_cd,   "cd",   "change the current directory"},
+        {cmd_cd,   "cd",   "change the current working directory"},
+        {cmd_pwd,  "pwd",  "print the current working directory"},
         {cmd_wait, "wait", "wait for all background processes to complete"}
 };
 
