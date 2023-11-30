@@ -19,10 +19,11 @@
 #include "process.h"
 #include "shell.h"
 
-int size_of(tok_t *toks) {
-    if (!toks) return 0;
-    for (int i = 0; i < MAXTOKS; i++) if (!toks[i]) return i;
-    return 0;
+int size_of(char **argv) {
+    if (!argv) return 0;
+    int argc = 0;
+    while (argv[argc]) argc++;
+    return argc;
 }
 
 int cmd_quit(tok_t arg[]) {
