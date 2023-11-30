@@ -137,32 +137,24 @@ void add_process(process *p) {
     p->prev = last_process;
 }
 
-void
-setInputStd(process * p, int redirectIndex)
-{
+void setInputStd(process * p, int redirectIndex) {
     if (p->argv[redirectIndex + 1] == NULL)
         return;
     int file = open(p->argv[redirectIndex + 1], O_RDONLY);
     if (file >= 0)
         p->stdin = file;
-    int i;
-    for (i = redirectIndex; i < p->argc; i++)
+    for (int i = redirectIndex; i < p->argc; i++)
         p->argv[i] = NULL;
 }
 
 /**
  * handle output redirect.
  */
-void
-setOutputStd(process * p, int redirectIndex)
-{
-    if (p->argv[redirectIndex + 1] == NULL)
-        return;
+void setOutputStd(process * p, int redirectIndex) {
+    if (p->argv[redirectIndex + 1] == NULL) return;
     int file = open(p->argv[redirectIndex + 1], O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR | S_IROTH | S_IWOTH);
-    if (file >= 0)
-        p->stdout = file;
-    int i;
-    for (i = redirectIndex; i < p->argc; i++)
+    if (file >= 0) p->stdout = file;
+    for (int i = redirectIndex; i < p->argc; i++)
         p->argv[i] = NULL;
 }
 
@@ -199,6 +191,7 @@ process *create_process(tok_t *inputString) {
         p->argc--;
     }
 
+    printf("##### debug 3\n");
     return p;
 }
 
@@ -234,7 +227,9 @@ void run_external_cmd(tok_t argv[]) {
     process *p = create_process(argv);
     add_process(p);
 
+    printf("##### debug 4\n");
     int pid = fork();
+    printf("##### debug 5\n");
 
     if (pid == 0) {
         // child
