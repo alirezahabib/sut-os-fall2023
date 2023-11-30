@@ -251,6 +251,7 @@ void run_external_cmd(tok_t argv[]) {
         setpgid(parentPID, parentPID);
         if (!p->background) {
             tcsetpgrp(STDIN_FILENO, parentPID);
+            printf("debug 10");
             int *status;
             waitpid(pid, status, 2);
 

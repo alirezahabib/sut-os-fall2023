@@ -23,7 +23,7 @@ void launch_process(process *p) {
     char *path = getenv("PATH");
     char full_path[PATH_MAX * 2];
 
-    if (access(file, F_OK) != -1) {
+    if (access(file, F_OK) == 0) {
         printf("debug 6\n");
         execv(file, p->argv); // Can access file, execute it
     } else {
@@ -36,7 +36,7 @@ void launch_process(process *p) {
             printf("debug 8\n");
             sprintf(full_path, "%s/%s", dir, file);
 
-            if (access(full_path, F_OK) != -1) {
+            if (access(full_path, F_OK) == 0) {
                 printf("debug 9, %s\n", full_path);
                 // Can access file, execute it
                 execv(full_path, p->argv);
