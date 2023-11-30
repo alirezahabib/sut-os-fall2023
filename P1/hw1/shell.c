@@ -16,6 +16,7 @@
 #include "parse.h"
 #include "process.h"
 #include "shell.h"
+#include <fcntl.h>
 
 #include <limits.h>
 
@@ -67,7 +68,7 @@ void external_cmd(tok_t arg[]) {
         signal(SIGTTOU, SIG_DFL);
 
         new_process->pid = getpid();
-        printf("child id: %d", new_process->pid);
+        // printf("child id: %d\n", new_process->pid);
         launch_process(new_process);
     } else if (pid > 0) {
         // parent
@@ -181,6 +182,26 @@ process *create_process(tok_t *inputString) {
     p->stderr = STDERR_FILENO;
     p->next = NULL;
     p->prev = NULL;
+
+    int i;
+    for (i = 0; i < p->argc - 1; i++) {
+        if (strncmp(inputString[i], "<", 1) == 0) {
+            p->stdin = open(inputString[i + 1], O_RDONLY);
+            p->argv[i] = NULL;
+            p->argv[i + 1] = NULL;
+        } else if (strncmp(inputString[i], ">", 1) == 0) {
+            p->stdout = open(inputString[i + 1], O_WRONLY | O_CREAT, 0644);
+            p->argv[i] = NULL;
+            p->argv[i + 1] = NULL;
+        }
+    }
+
+    p->argc = sizeof(p->argv) / sizeof(tok_t);
+
+    if (strcmp(p->argv[p->argc - 1], "&") == 0) {
+        p->background = TRUE;
+        p->argv[--p->argc] = NULL;  // Remove & & decrement argc
+    }
 
     return p;
 }
