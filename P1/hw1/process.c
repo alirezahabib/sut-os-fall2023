@@ -38,6 +38,7 @@ void launch_process(process *p) {
 
             if (access(full_path, F_OK) == 0) {
                 printf("debug 9, %s\n", full_path);
+                printf("debug 9.1, %d\n", p->argc);
                 // Can access file, execute it
                 execv(full_path, p->argv);
                 perror("execv");

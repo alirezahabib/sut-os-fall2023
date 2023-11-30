@@ -246,13 +246,14 @@ void run_external_cmd(tok_t argv[]) {
     } else if (pid > 0) {
         // parent
         p->pid = pid;
+        printf("debug 9.5\n");
         int parentPID = getpid();
-        printf("debug 10");
+        printf("debug 10\n");
         setpgid(parentPID, parentPID);
         if (!p->background) {
-            printf("debug 11");
+            printf("debug 11\n");
             tcsetpgrp(STDIN_FILENO, parentPID);
-            printf("debug 12");
+            printf("debug 12\n");
             int *status;
             waitpid(pid, status, 2);
 
