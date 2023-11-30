@@ -138,22 +138,6 @@ void add_process(process *p) {
     p->prev = last_process;
 }
 
-void setInputStd(process *p, int redirectIndex) {
-    if (p->argv[redirectIndex + 1] == NULL) return;
-    int file = open(p->argv[redirectIndex + 1], O_RDONLY);
-    if (file >= 0) p->stdin = file;
-    for (int i = redirectIndex; i < p->argc; i++) p->argv[i] = NULL;
-}
-
-/**
- * handle output redirect.
- */
-void setOutputStd(process *p, int redirectIndex) {
-    if (p->argv[redirectIndex + 1] == NULL) return;
-    int file = open(p->argv[redirectIndex + 1], O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR | S_IROTH | S_IWOTH);
-    if (file >= 0) p->stdout = file;
-    for (int i = redirectIndex; i < p->argc; i++) p->argv[i] = NULL;
-}
 
 /**
  * Creates a process given the inputString from stdin
@@ -172,14 +156,30 @@ process *create_process(tok_t *inputString) {
     p->stdout = STDOUT_FILENO;
     p->stderr = STDERR_FILENO;
 
-    int redirectIndex;
-    printf("##### debug 1\n");
-    if (p->argv && (redirectIndex = isDirectTok(p->argv, "<")) >= 0) setInputStd(p, redirectIndex);
-    printf("##### debug 1.5\n");
-    if (p->argv && (redirectIndex = isDirectTok(p->argv, ">")) >= 0) setOutputStd(p, redirectIndex);
+    for (int i = 0; i < p->argc - 1; i++) {
+        if (strncmp(inputString[i], "<", 1) == 0) {
+            int file = open(inputString[i + 1], O_RDONLY);
+            if (file >= 0) p->stdin;
+            else {
+                perror("open");
+                exit(0);
+            }
+            p->argv[i] = NULL;
+            p->argv[i + 1] = NULL;
+        } else if (strncmp(inputString[i], ">", 1) == 0) {
+            int file = open(p->argv[i + 1], O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR | S_IROTH | S_IWOTH);
+            if (file >= 0) p->stdout = file;
+            else {
+                perror("open");
+                exit(0);
+            }
+            p->argv[i] = NULL;
+            p->argv[i + 1] = NULL;
+        }
+    }
+
 
     p->argc = size_of(p->argv);
-
     printf("##### debug 2\n");
 
 
