@@ -155,11 +155,15 @@ process *create_process(tok_t *inputString) {
     p->stdin = STDIN_FILENO;
     p->stdout = STDOUT_FILENO;
     p->stderr = STDERR_FILENO;
+    printf("##### debug 1, %d\n", p->argc);
 
     for (int i = 0; i < p->argc - 1; i++) {
         if (strncmp(inputString[i], "<", 1) == 0) {
             int file = open(inputString[i + 1], O_RDONLY);
-            if (file >= 0) p->stdin;
+            if (file >= 0) {
+                p->stdin;
+                printf("debug 1.5\n");
+            }
             else {
                 perror("open");
                 exit(0);
@@ -178,12 +182,9 @@ process *create_process(tok_t *inputString) {
         }
     }
 
-
     p->argc = size_of(p->argv);
-    printf("##### debug 2\n");
 
-
-    printf("##### debug 2.5, %d\n", p->argc);
+    printf("##### debug 2, %d\n", p->argc);
 
 
 //    if (strcmp(p->argv[p->argc - 1], "&") == 0) {
