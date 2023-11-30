@@ -19,10 +19,10 @@
 #include "process.h"
 #include "shell.h"
 
-int size_of(char **argv) {
-    int size = -1;
-    while (argv[++size]);
-    return size;
+int size_of(tok_t *toks) {
+    if (toks == NULL) return 0;
+    for (int i = 0; i < MAXTOKS; i++) if (!toks[i]) return i;
+    return 0;
 }
 
 int cmd_quit(tok_t arg[]) {
@@ -137,7 +137,7 @@ void add_process(process *p) {
     p->prev = last_process;
 }
 
-void setInputStd(process * p, int redirectIndex) {
+void setInputStd(process *p, int redirectIndex) {
     if (p->argv[redirectIndex + 1] == NULL)
         return;
     int file = open(p->argv[redirectIndex + 1], O_RDONLY);
@@ -150,7 +150,7 @@ void setInputStd(process * p, int redirectIndex) {
 /**
  * handle output redirect.
  */
-void setOutputStd(process * p, int redirectIndex) {
+void setOutputStd(process *p, int redirectIndex) {
     if (p->argv[redirectIndex + 1] == NULL) return;
     int file = open(p->argv[redirectIndex + 1], O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR | S_IROTH | S_IWOTH);
     if (file >= 0) p->stdout = file;
