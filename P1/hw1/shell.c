@@ -24,11 +24,10 @@ process *create_process(tok_t *inputString);
 
 void add_process(process *p);
 
-int size_of(tok_t *toks) {
-    for (int i = 0; i < 99999; i++)
-        if (!toks[i])
-            return i;
-    return 0;
+int size_of(char **argv) {
+    int argc = -1;
+    while (argv[++argc]);
+    return argc;
 }
 
 int cmd_quit(tok_t arg[]) {
@@ -174,8 +173,7 @@ void add_process(process *p) {
 /**
  * handle input redirect.
  */
-void
-setInputStd(process *p, int redirectIndex) {
+void setInputStd(process *p, int redirectIndex) {
     if (p->argv[redirectIndex + 1] == NULL)
         return;
     int file = open(p->argv[redirectIndex + 1], O_RDONLY);
@@ -189,8 +187,7 @@ setInputStd(process *p, int redirectIndex) {
 /**
  * handle output redirect.
  */
-void
-setOutputStd(process *p, int redirectIndex) {
+void setOutputStd(process *p, int redirectIndex) {
     if (p->argv[redirectIndex + 1] == NULL)
         return;
     int file = open(p->argv[redirectIndex + 1], O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR | S_IROTH | S_IWOTH);
@@ -210,7 +207,6 @@ process *create_process(tok_t *inputString) {
     // In order of declaration
     p->argv = inputString;
     p->argc = size_of(inputString); // sizeof(inputString) / sizeof(tok_t);
-    p->pid = getpid();
     p->completed = FALSE;
     p->stopped = FALSE;
     p->background = FALSE;
@@ -218,8 +214,6 @@ process *create_process(tok_t *inputString) {
     p->stdin = STDIN_FILENO;
     p->stdout = STDOUT_FILENO;
     p->stderr = STDERR_FILENO;
-    p->next = NULL;
-    p->prev = NULL;
 
     // Look for < or > in arguments
     int i;
@@ -250,7 +244,7 @@ process *create_process(tok_t *inputString) {
 
 
 int shell(int argc, char *argv[]) {
-    char *s = malloc(INPUT_STRING_SIZE + 1);            /* user input string */
+    char *s; //= malloc(INPUT_STRING_SIZE + 1);            /* user input string */
     tok_t *t;            /* tokens parsed from input */
     int lineNum = 0;
     int fundex = -1;
