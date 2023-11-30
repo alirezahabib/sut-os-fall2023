@@ -184,14 +184,14 @@ process *create_process(tok_t *inputString) {
     printf("##### debug 2\n");
 
     p->argc = size_of(p->argv);
-    printf("##### debug 2.5\n");
+    printf("##### debug 2.5, %d\n", p->argc);
 
 
-    if (strcmp(p->argv[p->argc - 1], "&") == 0) {
-        p->background = TRUE;
-        p->argv[p->argc - 1] = NULL;
-        p->argc--;
-    }
+//    if (strcmp(p->argv[p->argc - 1], "&") == 0) {
+//        p->background = TRUE;
+//        p->argv[p->argc - 1] = NULL;
+//        p->argc--;
+//    }
 
     printf("##### debug 3\n");
     return p;
