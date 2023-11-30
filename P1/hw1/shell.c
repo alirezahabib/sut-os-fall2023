@@ -164,6 +164,38 @@ void add_process(process *p) {
 }
 
 /**
+ * handle input redirect.
+ */
+void
+setInputStd(process * p, int redirectIndex)
+{
+    if (p->argv[redirectIndex + 1] == NULL)
+        return;
+    int file = open(p->argv[redirectIndex + 1], O_RDONLY);
+    if (file >= 0)
+        p->stdin = file;
+    int i;
+    for (i = redirectIndex; i < p->argc; i++)
+        p->argv[i] = NULL;
+}
+
+/**
+ * handle output redirect.
+ */
+void
+setOutputStd(process * p, int redirectIndex)
+{
+    if (p->argv[redirectIndex + 1] == NULL)
+        return;
+    int file = open(p->argv[redirectIndex + 1], O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR | S_IROTH | S_IWOTH);
+    if (file >= 0)
+        p->stdout = file;
+    int i;
+    for (i = redirectIndex; i < p->argc; i++)
+        p->argv[i] = NULL;
+}
+
+/**
  * Creates a process given the inputString from stdin
  */
 process *create_process(tok_t *inputString) {
@@ -183,24 +215,15 @@ process *create_process(tok_t *inputString) {
     p->next = NULL;
     p->prev = NULL;
 
-    int i;
-    for (i = 0; i < p->argc - 1; i++) {
-        if (strncmp(inputString[i], "<", 1) == 0) {
-            p->stdin = open(inputString[i + 1], O_RDONLY);
-            p->argv[i] = NULL;
-            p->argv[i + 1] = NULL;
-        } else if (strncmp(inputString[i], ">", 1) == 0) {
-            p->stdout = open(inputString[i + 1], O_WRONLY | O_CREAT, 0644);
-            p->argv[i] = NULL;
-            p->argv[i + 1] = NULL;
-        }
-    }
+    int redirectIndex;
+    if (p->argv && (redirectIndex = isDirectTok(p->argv, "<")) >= 0) setInputStd(p, redirectIndex);
+    if (p->argv && (redirectIndex = isDirectTok(p->argv, ">")) >= 0) setOutputStd(p, redirectIndex);
 
     p->argc = sizeof(p->argv) / sizeof(tok_t);
 
-    if (strcmp(p->argv[p->argc - 1], "&") == 0) {
+    if (p->argv && strcmp(p->argv[p->argc - 1],"&") == 0){
         p->background = TRUE;
-        p->argv[--p->argc] = NULL;  // Remove & & decrement argc
+        p->argv[--p->argc] = NULL;
     }
 
     return p;
