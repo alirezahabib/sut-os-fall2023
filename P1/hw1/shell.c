@@ -184,12 +184,12 @@ process *create_process(tok_t *inputString) {
     p->stderr = STDERR_FILENO;
 
     int redirectIndex;
-    printf("##### inja\n");
+    printf("##### debug 1\n");
     if (p->argv && (redirectIndex = isDirectTok(p->argv, "<")) >= 0)
         setInputStd(p, redirectIndex);
     if (p->argv && (redirectIndex = isDirectTok(p->argv, ">")) >= 0)
         setOutputStd(p, redirectIndex);
-
+    printf("##### debug 2\n");
 
     p->argc = size_of(p->argv);
 
