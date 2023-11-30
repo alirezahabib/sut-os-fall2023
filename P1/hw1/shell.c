@@ -142,10 +142,8 @@ void setInputStd(process *p, int redirectIndex) {
     if (p->argv[redirectIndex + 1] == NULL)
         return;
     int file = open(p->argv[redirectIndex + 1], O_RDONLY);
-    if (file >= 0)
-        p->stdin = file;
-    for (int i = redirectIndex; i < p->argc; i++)
-        p->argv[i] = NULL;
+    if (file >= 0) p->stdin = file;
+    for (int i = redirectIndex; i < p->argc; i++) p->argv[i] = NULL;
 }
 
 /**
@@ -178,8 +176,7 @@ process *create_process(tok_t *inputString) {
 
     int redirectIndex;
     printf("##### debug 1\n");
-//    if (p->argv && (redirectIndex = isDirectTok(p->argv, "<")) >= 0)
-//        setInputStd(p, redirectIndex);
+    if (p->argv && (redirectIndex = isDirectTok(p->argv, "<")) >= 0) setInputStd(p, redirectIndex);
 //    if (p->argv && (redirectIndex = isDirectTok(p->argv, ">")) >= 0)
 //        setOutputStd(p, redirectIndex);
     printf("##### debug 2\n");
