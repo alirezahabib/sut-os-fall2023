@@ -33,6 +33,7 @@ void launch_process(process *p) {
 
         char *dir = strtok(path_copy, ":");
         while (dir) {
+            printf("debug 8\n");
             sprintf(full_path, "%s/%s", dir, file);
 
             if (access(full_path, F_OK) != -1) {
