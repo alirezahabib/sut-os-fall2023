@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 #include <termios.h>
 #include <string.h>
+#include "limits.h"
 
 /**
  * Executes the process p.
@@ -20,7 +21,7 @@ void launch_process(process *p) {
 
     // Check if file exists in PATH
     char *path = getenv("PATH");
-    char *full_path = NULL;
+    char full_path[PATH_MAX * 2];
 
     if (access(file, F_OK) == 0) {
         // Can access file, execute it
@@ -28,17 +29,16 @@ void launch_process(process *p) {
     } else {
         // Search PATH
         char *path_copy = strdup(path);
+
         char *dir = strtok(path_copy, ":");
-
         while (dir) {
-            full_path = malloc(strlen(dir) + strlen(file) + 2);
-
             sprintf(full_path, "%s/%s", dir, file);
 
             if (access(full_path, F_OK) == 0) {
                 // Can access file, execute it
                 execv(full_path, p->argv);
                 perror("execv");
+                return;
             }
             dir = strtok(NULL, ":");
         }
