@@ -13,8 +13,7 @@
  * then p should take control of the terminal.
  */
 void launch_process(process *p) {
-    /** YOUR CODE HERE */
-    char *filename = p->argv[0];
+    char *file = p->argv[0];
 
     dup2(p->stdin, STDIN_FILENO);
     dup2(p->stdout, STDOUT_FILENO);
@@ -23,28 +22,28 @@ void launch_process(process *p) {
     char *path = getenv("PATH");
     char *full_path = NULL;
 
-    if (access(filename, F_OK) != -1) {
-        // File exists, execute it
-        execv(filename, p->argv);
+    if (access(file, F_OK) == 0) {
+        // Can access file, execute it
+        execv(file, p->argv);
     } else {
         // Search PATH
         char *path_copy = strdup(path);
         char *dir = strtok(path_copy, ":");
 
-        while (dir != NULL) {
-            full_path = malloc(strlen(dir) + strlen(filename) + 2);
+        while (dir) {
+            full_path = malloc(strlen(dir) + strlen(file) + 2);
 
-            sprintf(full_path, "%s/%s", dir, filename);
+            sprintf(full_path, "%s/%s", dir, file);
 
-            if (access(full_path, F_OK) != -1) {
-                // File exists, execute it
+            if (access(full_path, F_OK) == 0) {
+                // Can access file, execute it
                 execv(full_path, p->argv);
                 perror("execv");
             }
             dir = strtok(NULL, ":");
         }
 
-        if (dir == NULL) {
+        if (!dir) {
             perror("PATH");
             exit(0);
         }

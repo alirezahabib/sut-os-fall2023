@@ -20,6 +20,12 @@
 #include "process.h"
 #include "shell.h"
 
+int size_of(char **argv) {
+    int size = -1;
+    while (argv[++size]);
+    return size;
+}
+
 int cmd_quit(tok_t arg[]) {
     printf("Bye\n");
     exit(0);
@@ -28,21 +34,9 @@ int cmd_quit(tok_t arg[]) {
 
 int cmd_help(tok_t arg[]);
 
-void run_file(tok_t *arg);
+void run_external_cmd(tok_t arg[]);
 
-int size_of(char **argv) {
-    int size = -1;
-    while (argv[++size]);
-    return size;
-}
-
-process *find_process(int pid);
-
-int cmd_cd(tok_t arg[]) {
-    if (arg[0] == NULL) fprintf(stderr, "cd: missing argument\n");
-    else if (chdir(arg[0]) != 0) perror("cd");
-    return 1;
-}
+process *get_process(int pid);
 
 int cmd_pwd(tok_t arg[]) {
     char cwd[PATH_MAX];
@@ -51,22 +45,15 @@ int cmd_pwd(tok_t arg[]) {
     return 1;
 }
 
+int cmd_cd(tok_t arg[]) {
+    if (!arg[0]) fprintf(stderr, "cd: missing argument\n");
+    else if (chdir(arg[0]) != 0) perror("cd");
+    return 1;
+}
+
 int cmd_wait(tok_t arg[]) {
-    process *p = first_process;
-
-    while (p != NULL) {
-        if (!p->completed && p->background) {
-            int *status;
-            waitpid(p->pid, status, 2);
-
-            process *child = find_process(p->pid);
-            if (child != NULL) {
-                child->completed = TRUE;
-            }
-        }
-        p = p->next;
-    }
-
+    int *status;
+    while (waitpid(-1, status, 0) > 0);
     return 1;
 }
 
@@ -83,23 +70,21 @@ fun_desc_t cmd_table[] = {
         {cmd_quit, "quit", "quit the command shell"},
         {cmd_cd,   "cd",   "change the current working directory"},
         {cmd_pwd,  "pwd",  "print the current working directory"},
-        {cmd_wait, "wait", "wait for all background processes to complete"}
+        {cmd_wait, "wait", "wait for all background processes"}
 };
 
 int cmd_help(tok_t arg[]) {
     int i;
-    for (i = 0; i < (sizeof(cmd_table) / sizeof(fun_desc_t)); i++) {
+    for (i = 0; i < (sizeof(cmd_table) / sizeof(fun_desc_t)); i++)
         printf("%s - %s\n", cmd_table[i].cmd, cmd_table[i].doc);
-    }
     return 1;
 }
 
 
 int lookup(char cmd[]) {
     int i;
-    for (i = 0; i < (sizeof(cmd_table) / sizeof(fun_desc_t)); i++) {
+    for (i = 0; i < (sizeof(cmd_table) / sizeof(fun_desc_t)); i++)
         if (cmd && (strcmp(cmd_table[i].cmd, cmd) == 0)) return i;
-    }
     return -1;
 }
 
@@ -128,14 +113,12 @@ void init_shell() {
         tcsetpgrp(shell_terminal, shell_pgid);
         tcgetattr(shell_terminal, &shell_tmodes);
 
-
         signal(SIGINT, SIG_IGN);
         signal(SIGQUIT, SIG_IGN);
         signal(SIGTSTP, SIG_IGN);
         signal(SIGTTIN, SIG_IGN);
         signal(SIGTTOU, SIG_IGN);
     }
-    /** YOUR CODE HERE */
     first_process = malloc(sizeof(process));
     first_process->pid = getpid();
 
@@ -145,25 +128,26 @@ void init_shell() {
  * Add a process to our process list
  */
 void add_process(process *p) {
-    /** YOUR CODE HERE */
-    process *last = first_process;
-    while (last->next != NULL) {
-        last = last->next;
-    }
-    last->next = p;
-    p->prev = last;
+    process *last_process = first_process;
+
+    // Forward to the last process
+    while (last_process->next) last_process = last_process->next;
+
+    // Ex-
+    last_process->next = p;
+    p->prev = last_process;
 }
 
 /**
  * Creates a process given the inputString from stdin
  */
-
 process *create_process(tok_t *inputString) {
-    /** YOUR CODE HERE */
     process *p = malloc(sizeof(process));
+
     p->argv = inputString;
     p->argc = size_of(p->argv);
     p->completed = FALSE;
+    p->background = FALSE;
     p->stopped = FALSE;
     p->status = 0;
 
@@ -172,8 +156,7 @@ process *create_process(tok_t *inputString) {
     p->stderr = STDERR_FILENO;
 
     // Look for < or > in arguments
-    int i;
-    for (i = 0; i < p->argc - 1; i++) {
+    for (int i = 0; i < p->argc - 1; i++) {
         if (strncmp(inputString[i], "<", 1) == 0) {
             p->stdin = open(inputString[i + 1], O_RDONLY);
             p->argv[i] = NULL;
@@ -191,8 +174,6 @@ process *create_process(tok_t *inputString) {
         p->background = TRUE;
         p->argv[p->argc - 1] = NULL;
         p->argc--;
-    } else {
-        p->background = FALSE;
     }
 
     return p;
@@ -218,7 +199,7 @@ int shell(int argc, char *argv[]) {
         t = getToks(s); /* break the line into tokens */
         fundex = lookup(t[0]); /* Is first token a shell literal */
         if (fundex >= 0) cmd_table[fundex].fun(&t[1]);
-        else if (t[0]) run_file(t);
+        else if (t[0]) run_external_cmd(t);
         // fprintf(stdout, "%d: ", lineNum);
     }
 
@@ -226,16 +207,14 @@ int shell(int argc, char *argv[]) {
 }
 
 
-void run_file(tok_t argv[]) {
+void run_external_cmd(tok_t argv[]) {
     process *p = create_process(argv);
     add_process(p);
 
-    int pid;
-    pid = fork();
-    if (pid < 0) {
-        // error
-        perror("fork");
-    } else if (pid == 0) {
+    int pid = fork();
+
+    if (pid == 0) {
+        // child
         signal(SIGINT, SIG_DFL);
         signal(SIGQUIT, SIG_DFL);
         signal(SIGTSTP, SIG_DFL);
@@ -243,15 +222,9 @@ void run_file(tok_t argv[]) {
         signal(SIGTTOU, SIG_DFL);
 
         p->pid = getpid();
-
-        printf("child id: %d", p->pid);
-
-
         launch_process(p);
-
-    } else {
+    } else if (pid > 0) {
         // parent
-//        p->pid = getpid();
         p->pid = pid;
         int parentPID = getpid();
 
@@ -261,16 +234,13 @@ void run_file(tok_t argv[]) {
             int *status;
             waitpid(pid, status, 2);
 
-            process *child = find_process(pid);
-            if (child != NULL) {
-                child->completed = TRUE;
-            }
+            process *child = get_process(pid);
+            if (child) child->completed = TRUE;
         }
-
-    }
+    } else perror("fork");
 }
 
-process *find_process(int pid) {
+process *get_process(int pid) {
     process *p = first_process;
 
     do if (p->pid == pid) return p;
