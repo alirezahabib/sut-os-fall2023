@@ -23,10 +23,8 @@ void launch_process(process *p) {
     char *path = getenv("PATH");
     char full_path[PATH_MAX * 2];
 
-    if (access(file, F_OK) == 0) {
-        // Can access file, execute it
-        execv(file, p->argv);
-    } else {
+    if (access(file, F_OK) == 0) execv(file, p->argv); // Can access file, execute it
+    else {
         // Search PATH
         char *path_copy = strdup(path);
 

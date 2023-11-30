@@ -177,6 +177,11 @@ process *create_process(tok_t *inputString) {
     if (p->argv && (redirectIndex = isDirectTok(p->argv, "<")) >= 0) setInputStd(p, redirectIndex);
     printf("##### debug 1.5\n");
     if (p->argv && (redirectIndex = isDirectTok(p->argv, ">")) >= 0) setOutputStd(p, redirectIndex);
+
+    for (int j=0; j < p->argc; j++) {
+        printf("##### debug 1.6, %d, %s\n", j, p->argv[j]);
+    }
+
     printf("##### debug 2\n");
 
     p->argc = size_of(p->argv);
