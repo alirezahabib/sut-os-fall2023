@@ -168,7 +168,10 @@ process *create_process(tok_t *inputString) {
             p->argv[i + 1] = NULL;
         } else if (strncmp(inputString[i], ">", 1) == 0) {
             int file = open(p->argv[i + 1], O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR | S_IROTH | S_IWOTH);
-            if (file >= 0) p->stdout = file;
+            if (file >= 0) {
+                p->stdout = file;
+                printf("stout success!!\n");
+            }
             else {
                 perror("open");
                 exit(0);
