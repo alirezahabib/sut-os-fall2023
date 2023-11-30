@@ -21,7 +21,7 @@ void launch_process(process *p) {
 
     // Check if file exists in PATH
     char *path = getenv("PATH");
-    char *full_path = malloc(PATH_MAX * 2);
+    char full_path[PATH_MAX * 2];
 
     if (access(file, F_OK) != -1) {
         printf("debug 6\n");
@@ -37,10 +37,10 @@ void launch_process(process *p) {
             sprintf(full_path, "%s/%s", dir, file);
 
             if (access(full_path, F_OK) != -1) {
+                printf("debug 9\n");
                 // Can access file, execute it
                 execv(full_path, p->argv);
                 perror("execv");
-                free(full_path);
                 return;
             }
             dir = strtok(NULL, ":");
@@ -48,7 +48,6 @@ void launch_process(process *p) {
 
         if (!dir) {
             perror("PATH");
-            free(full_path);
             exit(0);
         }
     }
