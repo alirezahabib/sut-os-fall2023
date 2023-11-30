@@ -162,7 +162,7 @@ process *create_process(tok_t *inputString) {
     process *p = malloc(sizeof(process));
 
     p->argv = inputString;
-    //p->argc = size_of(p->argv);
+    p->argc = size_of(p->argv);
     p->completed = FALSE;
     p->background = FALSE;
     p->stopped = FALSE;
@@ -178,13 +178,11 @@ process *create_process(tok_t *inputString) {
     printf("##### debug 1.5\n");
     if (p->argv && (redirectIndex = isDirectTok(p->argv, ">")) >= 0) setOutputStd(p, redirectIndex);
 
-    for (int j=0; j < p->argc; j++) {
-        printf("##### debug 1.6, %d, %s\n", j, p->argv[j]);
-    }
+    p->argc = size_of(p->argv);
 
     printf("##### debug 2\n");
 
-    p->argc = size_of(p->argv);
+
     printf("##### debug 2.5, %d\n", p->argc);
 
 
