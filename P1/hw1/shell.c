@@ -17,11 +17,20 @@
 #include "process.h"
 #include "shell.h"
 #include <fcntl.h>
+#include "parse.c"
 
 #include <limits.h>
 
 process *create_process(tok_t *inputString);
+
 void add_process(process *p);
+
+int size_of(tok_t *toks) {
+    for (int i = 0; i < 99999; i++)
+        if (!toks[i])
+            return i;
+    return 0;
+}
 
 int cmd_quit(tok_t arg[]) {
     printf("Bye\n");
@@ -167,8 +176,7 @@ void add_process(process *p) {
  * handle input redirect.
  */
 void
-setInputStd(process * p, int redirectIndex)
-{
+setInputStd(process *p, int redirectIndex) {
     if (p->argv[redirectIndex + 1] == NULL)
         return;
     int file = open(p->argv[redirectIndex + 1], O_RDONLY);
@@ -183,8 +191,7 @@ setInputStd(process * p, int redirectIndex)
  * handle output redirect.
  */
 void
-setOutputStd(process * p, int redirectIndex)
-{
+setOutputStd(process *p, int redirectIndex) {
     if (p->argv[redirectIndex + 1] == NULL)
         return;
     int file = open(p->argv[redirectIndex + 1], O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR | S_IROTH | S_IWOTH);
@@ -215,13 +222,13 @@ process *create_process(tok_t *inputString) {
     p->next = NULL;
     p->prev = NULL;
 
-    int redirectIndex;
-    if (p->argv && (redirectIndex = isDirectTok(p->argv, "<")) >= 0) setInputStd(p, redirectIndex);
+    int redirectIndex = isDirectTok(p->argv, "<");
+    if (p->argv && redirectIndex >= 0) setInputStd(p, redirectIndex);
     if (p->argv && (redirectIndex = isDirectTok(p->argv, ">")) >= 0) setOutputStd(p, redirectIndex);
 
     p->argc = sizeof(p->argv) / sizeof(tok_t);
 
-    if (p->argv && strcmp(p->argv[p->argc - 1],"&") == 0){
+    if (p->argv && strcmp(p->argv[p->argc - 1], "&") == 0) {
         p->background = TRUE;
         p->argv[--p->argc] = NULL;
     }
