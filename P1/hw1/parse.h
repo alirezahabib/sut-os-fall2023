@@ -35,4 +35,6 @@ tok_t *getToks(char *line);
 
 void freeToks(tok_t *toks);
 
+int isDirectTok(tok_t *t, char *R);
+
 #endif

@@ -10,9 +10,6 @@
 #include <fcntl.h>
 #include <limits.h>
 
-#include "parse.c"
-
-
 #define FALSE 0
 #define TRUE 1
 #define INPUT_STRING_SIZE 80
