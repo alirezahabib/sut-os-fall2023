@@ -161,7 +161,7 @@ process *create_process(tok_t *inputString) {
         if (strncmp(inputString[i], "<", 1) == 0) {
             int file = open(inputString[i + 1], O_RDONLY);
             if (file >= 0) {
-                p->stdin;
+                p->stdin = file;
                 printf("debug 1.5\n");
             }
             else {
