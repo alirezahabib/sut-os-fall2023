@@ -155,15 +155,11 @@ process *create_process(tok_t *inputString) {
     p->stdin = STDIN_FILENO;
     p->stdout = STDOUT_FILENO;
     p->stderr = STDERR_FILENO;
-    printf("##### debug 1, %d\n", p->argc);
 
     for (int i = 0; i < p->argc - 1; i++) {
         if (strncmp(inputString[i], "<", 1) == 0) {
             int file = open(inputString[i + 1], O_RDONLY);
-            if (file >= 0) {
-                p->stdin = file;
-                printf("debug 1.5\n");
-            }
+            if (file >= 0) p->stdin = file;
             else {
                 perror("open");
                 exit(0);
@@ -184,16 +180,11 @@ process *create_process(tok_t *inputString) {
 
     p->argc = size_of(p->argv);
 
-    printf("##### debug 2, %d\n", p->argc);
+    if (strcmp(p->argv[p->argc - 1], "&") == 0) {
+        p->background = TRUE;
+        p->argv[--p->argc] = NULL;
+    }
 
-
-//    if (strcmp(p->argv[p->argc - 1], "&") == 0) {
-//        p->background = TRUE;
-//        p->argv[p->argc - 1] = NULL;
-//        p->argc--;
-//    }
-
-    printf("##### debug 3\n");
     return p;
 }
 
@@ -229,9 +220,7 @@ void run_external_cmd(tok_t argv[]) {
     process *p = create_process(argv);
     add_process(p);
 
-    printf("##### debug 4\n");
     int pid = fork();
-    printf("##### debug 5\n");
 
     if (pid == 0) {
         // child
@@ -246,14 +235,10 @@ void run_external_cmd(tok_t argv[]) {
     } else if (pid > 0) {
         // parent
         p->pid = pid;
-        printf("debug 9.5\n");
         int parentPID = getpid();
-        printf("debug 10\n");
         setpgid(parentPID, parentPID);
         if (!p->background) {
-            printf("debug 11\n");
             tcsetpgrp(STDIN_FILENO, parentPID);
-            printf("debug 12\n");
             int *status;
             waitpid(pid, status, 2);
 
