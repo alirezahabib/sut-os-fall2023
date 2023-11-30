@@ -184,6 +184,7 @@ process *create_process(tok_t *inputString) {
     p->stderr = STDERR_FILENO;
 
     int redirectIndex;
+    printf("##### inja\n");
     if (p->argv && (redirectIndex = isDirectTok(p->argv, "<")) >= 0)
         setInputStd(p, redirectIndex);
     if (p->argv && (redirectIndex = isDirectTok(p->argv, ">")) >= 0)
