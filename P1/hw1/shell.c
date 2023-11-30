@@ -21,6 +21,12 @@
 #include "shell.h"
 
 int size_of(char **argv) {
+    int argc = 0;
+    while (argv[argc] != NULL) {
+        argc++;
+    }
+    return argc;
+
     int size = -1;
     while (argv[++size]);
     return size;
@@ -143,11 +149,9 @@ void add_process(process *p) {
  */
 process *create_process(tok_t *inputString) {
     process *p = malloc(sizeof(process));
-
     p->argv = inputString;
     p->argc = size_of(p->argv);
     p->completed = FALSE;
-    p->background = FALSE;
     p->stopped = FALSE;
     p->status = 0;
 
@@ -156,7 +160,8 @@ process *create_process(tok_t *inputString) {
     p->stderr = STDERR_FILENO;
 
     // Look for < or > in arguments
-    for (int i = 0; i < p->argc - 1; i++) {
+    int i;
+    for (i = 0; i < p->argc - 1; i++) {
         if (strncmp(inputString[i], "<", 1) == 0) {
             p->stdin = open(inputString[i + 1], O_RDONLY);
             p->argv[i] = NULL;
@@ -174,6 +179,8 @@ process *create_process(tok_t *inputString) {
         p->background = TRUE;
         p->argv[p->argc - 1] = NULL;
         p->argc--;
+    } else {
+        p->background = FALSE;
     }
 
     return p;
