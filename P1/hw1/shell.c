@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <sys/syslimits.h>
 
 
 #define FALSE 0
@@ -29,28 +30,25 @@ int cmd_help(tok_t arg[]);
 
 void run_file(tok_t *arg);
 
-int calcArgC(char **argv);
+int size_of(char **argv) {
+    int size = -1;
+    while (argv[++size]);
+    return size;
+}
 
 process *find_process(int pid);
 
 int cmd_cd(tok_t arg[]) {
-    if (chdir(arg[0]) == 0) {
-//        printf("")
-    } else {
-        perror("chdir");
-    }
-    return 0;
+    if (arg[0] == NULL) fprintf(stderr, "cd: missing argument\n");
+    else if (chdir(arg[0]) != 0) perror("cd");
+    return 1;
 }
 
 int cmd_pwd(tok_t arg[]) {
-    char dir[1024];
-    if (getcwd(dir, sizeof(dir)) != NULL) {
-        printf("%s\n", dir);
-        return 0;
-    } else {
-        perror("getcwd");
-        return 1;
-    }
+    char cwd[PATH_MAX];
+    if (getcwd(cwd, sizeof(cwd)) != NULL) printf("%s\n", cwd);
+    else perror("getcwd");
+    return 1;
 }
 
 int cmd_wait(tok_t arg[]) {
@@ -164,7 +162,7 @@ process *create_process(tok_t *inputString) {
     /** YOUR CODE HERE */
     process *p = malloc(sizeof(process));
     p->argv = inputString;
-    p->argc = calcArgC(p->argv);
+    p->argc = size_of(p->argv);
     p->completed = FALSE;
     p->stopped = FALSE;
     p->status = 0;
@@ -187,7 +185,7 @@ process *create_process(tok_t *inputString) {
         }
     }
 
-    p->argc = calcArgC(p->argv);
+    p->argc = size_of(p->argv);
 
     if (strcmp(p->argv[p->argc - 1], "&") == 0) {
         p->background = TRUE;
@@ -198,14 +196,6 @@ process *create_process(tok_t *inputString) {
     }
 
     return p;
-}
-
-int calcArgC(char **argv) {
-    int argc = 0;
-    while (argv[argc] != NULL) {
-        argc++;
-    }
-    return argc;
 }
 
 
@@ -228,9 +218,7 @@ int shell(int argc, char *argv[]) {
         t = getToks(s); /* break the line into tokens */
         fundex = lookup(t[0]); /* Is first token a shell literal */
         if (fundex >= 0) cmd_table[fundex].fun(&t[1]);
-        else if (calcArgC(t) > 0) {
-            run_file(t);
-        }
+        else if (t[0]) run_file(t);
         // fprintf(stdout, "%d: ", lineNum);
     }
 
@@ -284,12 +272,9 @@ void run_file(tok_t argv[]) {
 
 process *find_process(int pid) {
     process *p = first_process;
-    while (p != NULL) {
-        if (p->pid == pid) {
-            return p;
-        }
-        p = p->next;
-    }
+
+    do if (p->pid == pid) return p;
+    while ((p = p->next));
 
     return NULL;
 }
