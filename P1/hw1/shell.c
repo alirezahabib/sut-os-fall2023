@@ -17,7 +17,6 @@
 #include "process.h"
 #include "shell.h"
 #include <fcntl.h>
-#include "parse.c"
 
 #include <limits.h>
 
@@ -222,15 +221,28 @@ process *create_process(tok_t *inputString) {
     p->next = NULL;
     p->prev = NULL;
 
-    int redirectIndex = isDirectTok(p->argv, "<");
-    if (p->argv && redirectIndex >= 0) setInputStd(p, redirectIndex);
-    if (p->argv && (redirectIndex = isDirectTok(p->argv, ">")) >= 0) setOutputStd(p, redirectIndex);
+    // Look for < or > in arguments
+    int i;
+    for (i = 0; i < p->argc - 1; i++) {
+        if (strncmp(inputString[i], "<", 1) == 0) {
+            p->stdin = open(inputString[i + 1], O_RDONLY);
+            p->argv[i] = NULL;
+            p->argv[i + 1] = NULL;
+        } else if (strncmp(inputString[i], ">", 1) == 0) {
+            p->stdout = open(inputString[i + 1], O_WRONLY | O_CREAT, 0644);
+            p->argv[i] = NULL;
+            p->argv[i + 1] = NULL;
+        }
+    }
 
-    p->argc = size_of(p->argv); //sizeof(p->argv) / sizeof(tok_t);
+    p->argc = size_of(p->argv);
 
-    if (p->argv && strcmp(p->argv[p->argc - 1], "&") == 0) {
+    if (strcmp(p->argv[p->argc - 1], "&") == 0) {
         p->background = TRUE;
-        p->argv[--p->argc] = NULL;
+        p->argv[p->argc - 1] = NULL;
+        p->argc--;
+    } else {
+        p->background = FALSE;
     }
 
     return p;
