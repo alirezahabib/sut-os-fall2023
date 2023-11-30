@@ -21,12 +21,13 @@ void launch_process(process *p) {
 
     // Check if file exists in PATH
     char *path = getenv("PATH");
-    char *full_path = malloc(PATH_MAX);
+    char *full_path = malloc(PATH_MAX * 2);
 
     if (access(file, F_OK) != -1) {
-        execv(file, p->argv); // Can access file, execute it
         printf("debug 6\n");
+        execv(file, p->argv); // Can access file, execute it
     } else {
+        printf("debug 7\n");
         // Search PATH
         char *path_copy = strdup(path);
 
