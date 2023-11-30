@@ -20,7 +20,7 @@
 #include "shell.h"
 
 int size_of(tok_t *toks) {
-    if (toks == NULL) return 0;
+    if (!toks) return 0;
     for (int i = 0; i < MAXTOKS; i++) if (!toks[i]) return i;
     return 0;
 }
@@ -184,6 +184,8 @@ process *create_process(tok_t *inputString) {
     printf("##### debug 2\n");
 
     p->argc = size_of(p->argv);
+    printf("##### debug 2.5\n");
+
 
     if (strcmp(p->argv[p->argc - 1], "&") == 0) {
         p->background = TRUE;
