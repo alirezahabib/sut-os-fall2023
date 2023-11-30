@@ -10,6 +10,8 @@
 #include <fcntl.h>
 #include <limits.h>
 
+#include "parse.c"
+
 
 #define FALSE 0
 #define TRUE 1
@@ -21,12 +23,6 @@
 #include "shell.h"
 
 int size_of(char **argv) {
-    int argc = 0;
-    while (argv[argc] != NULL) {
-        argc++;
-    }
-    return argc;
-
     int size = -1;
     while (argv[++size]);
     return size;
@@ -144,14 +140,45 @@ void add_process(process *p) {
     p->prev = last_process;
 }
 
+void
+setInputStd(process * p, int redirectIndex)
+{
+    if (p->argv[redirectIndex + 1] == NULL)
+        return;
+    int file = open(p->argv[redirectIndex + 1], O_RDONLY);
+    if (file >= 0)
+        p->stdin = file;
+    int i;
+    for (i = redirectIndex; i < p->argc; i++)
+        p->argv[i] = NULL;
+}
+
+/**
+ * handle output redirect.
+ */
+void
+setOutputStd(process * p, int redirectIndex)
+{
+    if (p->argv[redirectIndex + 1] == NULL)
+        return;
+    int file = open(p->argv[redirectIndex + 1], O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR | S_IROTH | S_IWOTH);
+    if (file >= 0)
+        p->stdout = file;
+    int i;
+    for (i = redirectIndex; i < p->argc; i++)
+        p->argv[i] = NULL;
+}
+
 /**
  * Creates a process given the inputString from stdin
  */
 process *create_process(tok_t *inputString) {
     process *p = malloc(sizeof(process));
+
     p->argv = inputString;
     p->argc = size_of(p->argv);
     p->completed = FALSE;
+    p->background = FALSE;
     p->stopped = FALSE;
     p->status = 0;
 
@@ -159,19 +186,12 @@ process *create_process(tok_t *inputString) {
     p->stdout = STDOUT_FILENO;
     p->stderr = STDERR_FILENO;
 
-    // Look for < or > in arguments
-    int i;
-    for (i = 0; i < p->argc - 1; i++) {
-        if (strncmp(inputString[i], "<", 1) == 0) {
-            p->stdin = open(inputString[i + 1], O_RDONLY);
-            p->argv[i] = NULL;
-            p->argv[i + 1] = NULL;
-        } else if (strncmp(inputString[i], ">", 1) == 0) {
-            p->stdout = open(inputString[i + 1], O_WRONLY | O_CREAT, 0644);
-            p->argv[i] = NULL;
-            p->argv[i + 1] = NULL;
-        }
-    }
+    int redirectIndex;
+    if (p->argv && (redirectIndex = isDirectTok(p->argv, "<")) >= 0)
+        setInputStd(p, redirectIndex);
+    if (p->argv && (redirectIndex = isDirectTok(p->argv, ">")) >= 0)
+        setOutputStd(p, redirectIndex);
+
 
     p->argc = size_of(p->argv);
 
@@ -179,8 +199,6 @@ process *create_process(tok_t *inputString) {
         p->background = TRUE;
         p->argv[p->argc - 1] = NULL;
         p->argc--;
-    } else {
-        p->background = FALSE;
     }
 
     return p;
