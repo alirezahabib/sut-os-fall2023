@@ -210,7 +210,7 @@ process *create_process(tok_t *inputString) {
 
     // In order of declaration
     p->argv = inputString;
-    p->argc = sizeof(inputString) / sizeof(tok_t);
+    p->argc = size_of(inputString); // sizeof(inputString) / sizeof(tok_t);
     p->pid = getpid();
     p->completed = FALSE;
     p->stopped = FALSE;
@@ -226,7 +226,7 @@ process *create_process(tok_t *inputString) {
     if (p->argv && redirectIndex >= 0) setInputStd(p, redirectIndex);
     if (p->argv && (redirectIndex = isDirectTok(p->argv, ">")) >= 0) setOutputStd(p, redirectIndex);
 
-    p->argc = sizeof(p->argv) / sizeof(tok_t);
+    p->argc = size_of(p->argv); //sizeof(p->argv) / sizeof(tok_t);
 
     if (p->argv && strcmp(p->argv[p->argc - 1], "&") == 0) {
         p->background = TRUE;
