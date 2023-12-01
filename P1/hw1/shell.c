@@ -157,7 +157,7 @@ process *create_process(tok_t *inputString) {
     p->stderr = STDERR_FILENO;
 
     for (int i = 0; i < p->argc - 1; i++) {
-        if (strncmp(inputString[i], "<", 1) == 0) {
+        if (strncmp(p->argv[i], "<", 1) == 0) {
             int file = open(inputString[i + 1], O_RDONLY);
             if (file >= 0) p->stdin = file;
             else {
@@ -165,7 +165,7 @@ process *create_process(tok_t *inputString) {
                 exit(0);
             }
             p->argv[i] = NULL;
-            p->argv[i + 1] = NULL;
+            p->argv[++i] = NULL;
         } else if (strncmp(inputString[i], ">", 1) == 0) {
             int file = open(p->argv[i + 1], O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR | S_IROTH | S_IWOTH);
             if (file >= 0) {
@@ -177,7 +177,7 @@ process *create_process(tok_t *inputString) {
                 exit(0);
             }
             p->argv[i] = NULL;
-            p->argv[i + 1] = NULL;
+            p->argv[++i] = NULL;
         }
     }
 
