@@ -143,12 +143,33 @@ void handle_files_request(int fd) {
         return;
     }
 
-    /* Remove beginning `./` */
-    char *path = malloc(2 + strlen(request->path) + 1);
-    path[0] = '.';
-    path[1] = '/';
-    memcpy(path + 2, request->path, strlen(request->path) + 1);
-    printf("Path: %s\n", path);
+    struct stat pathStat;
+
+    // Append server_files_directory to the beginning of the given path
+    char fullpath[FILENAME_MAX];
+    sprintf(fullpath, "./%s/%s", server_files_directory, request->path);
+
+    // Check if the path exists
+    if (stat(fullpath, &pathStat) == 0) {
+        // Check if the path is a file
+        if (S_ISREG(pathStat.st_mode)) {
+            printf("file\n");
+        } else if (S_ISDIR(pathStat.st_mode)) {
+            // Check if the directory contains "index.html"
+            char indexPath[256];  // Adjust the size as needed
+            snprintf(indexPath, sizeof(indexPath), "%s/index.html", fullpath);
+            struct stat indexStat;
+
+            if (stat(indexPath, &indexStat) == 0 && S_ISREG(indexStat.st_mode)) {
+                printf("%s\n", indexPath);
+            } else {
+                printf("no index.html\n");
+            }
+        }
+    } else {
+        printf("404\n");
+    }
+
 
     /*
      * TODO: First is to serve files. If the file given by `path` exists,
