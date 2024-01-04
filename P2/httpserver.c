@@ -71,16 +71,14 @@ void serve_directory(int fd, char *path) {
     // Start building the HTML response
     char* response = malloc(FILENAME_MAX * sizeof(char) * (MAX_DIR_LENGTH * 2 + 100));
 
-    sprintf(response, "<html><body><h2>Content of %s</h2><ul>", path);
+    sprintf(response, "<html><head><title>Content of directory</title></head><body><h2>Content of %s</h2><ul>", path);
 
     // Read the directory contents
     struct dirent *entry;
     int entry_count = 0;
     while ((entry = readdir(dir)) != NULL && entry_count < MAX_DIR_LENGTH) {
         // Skip "." and ".."
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
 
         // Add a list item with a link
         sprintf(response + strlen(response), "<li><a href=\"./%s\">%s</a></li>", entry->d_name, entry->d_name);
@@ -88,14 +86,10 @@ void serve_directory(int fd, char *path) {
     }
 
     // If there are more entries, add an ellipsis
-    if (entry != NULL) {
-        strcat(response, "<li>...</li>");
-    }
+    if (entry != NULL) strcat(response, "<li>...</li>");
 
     strcat(response, "</ul></body></html>");
-
     http_send_string(fd, response);
-
     closedir(dir);
 }
 
