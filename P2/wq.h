@@ -7,19 +7,22 @@
  * waiting to be served. */
 
 typedef struct wq_item {
-  int client_socket_fd; // Client socket to be served.
-  struct wq_item *next;
-  struct wq_item *prev;
+    int client_socket_fd; // Client socket to be served.
+    struct wq_item *next;
+    struct wq_item *prev;
 } wq_item_t;
 
 typedef struct wq {
-  int size;
-  wq_item_t *head;
-  /* TODO: More stuff here, maybe? */
+    int size;
+    wq_item_t *head;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
 } wq_t;
 
 void wq_init(wq_t *wq);
+
 void wq_push(wq_t *wq, int client_socket_fd);
+
 int wq_pop(wq_t *wq);
 
 #endif

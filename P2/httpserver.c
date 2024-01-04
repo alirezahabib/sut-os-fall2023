@@ -167,6 +167,30 @@ void handle_files_request(int fd) {
     close(fd);
 }
 
+typedef struct proxy_object {
+    int src_socket;
+    int dst_socket;
+    int alive;
+    pthread_cond_t *cond;
+} proxy_object;
+
+void send_to_client(int dst, int src) {
+    void *buffer = malloc(10000);
+    size_t size;
+    while ((size = read(src, buffer, 10000)) > 0)
+        http_send_data(dst, buffer, size);
+
+    free(buffer);
+}
+
+void *run_proxy(void *args) {
+    proxy_object *pstatus = (proxy_object *) args;
+    send_to_client(pstatus->dst_socket, pstatus->src_socket);
+    pstatus->alive = 0;
+    pthread_cond_signal(pstatus->cond);
+    return NULL;
+}
+
 
 /*
  * Opens a connection to the proxy target (hostname=server_proxy_hostname and
@@ -224,21 +248,44 @@ void handle_proxy_request(int fd) {
         close(target_fd);
         close(fd);
         return;
-
     }
 
-    /*
-    * TODO: Your solution for task 3 belongs here!
-    */
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
+    proxy_object proxy_request = {
+            .src_socket = fd,
+            .dst_socket = target_fd,
+            .alive = 1,
+            .cond = &cond
+    };
+
+    proxy_object proxy_response = {
+            .src_socket = target_fd,
+            .dst_socket = fd,
+            .alive = 1,
+            .cond = &cond
+    };
+
+    pthread_t request_thread, response_thread;
+
+    pthread_create(&request_thread, NULL, run_proxy, &proxy_request);
+    pthread_create(&response_thread, NULL, run_proxy, &proxy_response);
+
+    while (proxy_request.alive && proxy_response.alive) pthread_cond_wait(&cond, &mutex);
+
+    pthread_cancel(request_thread);
+    pthread_cancel(response_thread);
+    pthread_mutex_destroy(&mutex);
+    pthread_cond_destroy(&cond);
+
+    close(fd);
+    close(target_fd);
 }
 
 void *thread_handler(void *args) {
     void (*func)(int) = args;
-    while (1) {
-        int fd = wq_pop(&work_queue);
-        func(fd);
-        close(fd);
-    }
+    while (1) func(wq_pop(&work_queue));
 }
 
 void init_thread_pool(int num_threads, void (*request_handler)(int)) {
