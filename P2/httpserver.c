@@ -153,15 +153,6 @@ void handle_files_request(int fd) {
         if (S_ISREG(path_stat.st_mode)) {
             serve_file(fd, full_path, path_stat.st_size);
         } else if (S_ISDIR(path_stat.st_mode)) {
-            http_start_response(fd, 200);
-            http_send_header(fd, "Content-Type", "text/html");
-            http_end_headers(fd);
-            http_send_string(fd,
-                             "<center>"
-                             "<h1>Welcome to httpserver!</h1>"
-                             "<hr>"
-                             "<p>You are in directory listing.</p>"
-                             "</center>");
             // Check if the directory contains "index.html"
             char indexPath[FILENAME_MAX + 11];  // Adjust the size as needed
             sprintf(indexPath, "%s/index.html", full_path);
@@ -170,6 +161,15 @@ void handle_files_request(int fd) {
             if (stat(indexPath, &indexStat) == 0 && S_ISREG(indexStat.st_mode)) {
                 serve_file(fd, indexPath, indexStat.st_size);
             } else {
+                http_start_response(fd, 200);
+                http_send_header(fd, "Content-Type", "text/html");
+                http_end_headers(fd);
+                http_send_string(fd,
+                                 "<center>"
+                                 "<h1>Welcome to httpserver!</h1>"
+                                 "<hr>"
+                                 "<p>You are in directory listing.</p>"
+                                 "</center>");
                 printf("no index.html\n");
             }
         }
