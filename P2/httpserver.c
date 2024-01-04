@@ -40,9 +40,10 @@ int server_proxy_port;
  * ATTENTION: Be careful to optimize your code. Judge is
  *            sesnsitive to time-out errors.
  */
-void serve_file(int fd, char *path, off_t size) {
+void serve_file(int fd, char *path, off_t file_size) {
+    long size = (long) file_size;
     char content_length[20];
-    sprintf(content_length, "%ld", (long) size);
+    sprintf(content_length, "%ld", size);
 
     http_start_response(fd, 200);
     http_send_header(fd, "Content-Type", http_get_mime_type(path));
@@ -54,7 +55,7 @@ void serve_file(int fd, char *path, off_t size) {
     read(file_fd, buffer, size);
     buffer[size] = '\0';
 
-    http_send_data(fd, buffer, size);
+    http_send_data(fd, buffer, size + 1);
 
     close(file_fd);
     free(buffer);
@@ -92,12 +93,10 @@ void serve_directory(int fd, char *path) {
         strcat(response, "<li>...</li>");
     }
 
-    // Close the HTML response
     strcat(response, "</ul></body></html>");
 
     http_send_string(fd, response);
 
-    // Close the directory
     closedir(dir);
 }
 
@@ -150,15 +149,14 @@ void handle_files_request(int fd) {
             serve_file(fd, full_path, path_stat.st_size);
         } else if (S_ISDIR(path_stat.st_mode)) {
             // Check if the directory contains "index.html"
-            char indexPath[FILENAME_MAX + 11];  // Adjust the size as needed
-            sprintf(indexPath, "%s/index.html", full_path);
-            struct stat indexStat;
+            char index_path[FILENAME_MAX + 11];
+            sprintf(index_path, "%s/index.html", full_path);
+            struct stat index_stat;
 
-            if (stat(indexPath, &indexStat) == 0 && S_ISREG(indexStat.st_mode)) {
-                serve_file(fd, indexPath, indexStat.st_size);
-            } else {
+            if (stat(index_path, &index_stat) == 0 && S_ISREG(index_stat.st_mode))
+                serve_file(fd, index_path, index_stat.st_size);
+            else
                 serve_directory(fd, full_path);
-            }
         }
     } else {
         http_start_response(fd, 404);
@@ -173,18 +171,6 @@ void handle_files_request(int fd) {
                          "<p><a href=\"/\">Back to home</a></p>"
                          "</center>");
     }
-
-
-    /*
-     * TODO: First is to serve files. If the file given by `path` exists,
-     * call serve_file() on it. Else, serve a 404 Not Found error below.
-     *
-     * TODO: Second is to serve both files and directories. You will need to
-     * determine when to call serve_file() or serve_directory() depending
-     * on `path`.
-     *
-     * Feel FREE to delete/modify anything on this function.
-     * */
     close(fd);
 }
 
