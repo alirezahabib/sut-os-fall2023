@@ -67,10 +67,6 @@ void serve_directory(int fd, char *path) {
 
     // Open the directory
     DIR *dir = opendir(path);
-    if (dir == NULL) {
-        perror("Error opening directory");
-        exit(EXIT_FAILURE);
-    }
 
     // Start building the HTML response
     char* response = malloc(FILENAME_MAX * sizeof(char) * (MAX_DIR_LENGTH * 2 + 100));
@@ -161,16 +157,7 @@ void handle_files_request(int fd) {
             if (stat(indexPath, &indexStat) == 0 && S_ISREG(indexStat.st_mode)) {
                 serve_file(fd, indexPath, indexStat.st_size);
             } else {
-                http_start_response(fd, 200);
-                http_send_header(fd, "Content-Type", "text/html");
-                http_end_headers(fd);
-                http_send_string(fd,
-                                 "<center>"
-                                 "<h1>Welcome to httpserver!</h1>"
-                                 "<hr>"
-                                 "<p>You are in directory listing.</p>"
-                                 "</center>");
-                printf("no index.html\n");
+                serve_directory(fd, full_path);
             }
         }
     } else {
