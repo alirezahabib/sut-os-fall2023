@@ -40,10 +40,9 @@ int server_proxy_port;
  * ATTENTION: Be careful to optimize your code. Judge is
  *            sesnsitive to time-out errors.
  */
-void serve_file(int fd, char *path, off_t file_size) {
-    long size = (long) file_size;
+void serve_file(int fd, char *path, off_t size) {
     char content_length[20];
-    sprintf(content_length, "%ld", size);
+    sprintf(content_length, "%ld", (long) size);
 
     http_start_response(fd, 200);
     http_send_header(fd, "Content-Type", http_get_mime_type(path));
