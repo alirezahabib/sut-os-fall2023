@@ -151,13 +151,23 @@ void handle_files_request(int fd) {
 
     // Check if the path exists
     if (stat(fullpath, &pathStat) == 0) {
+        http_start_response(fd, 200);
+        http_send_header(fd, "Content-Type", "text/html");
+        http_end_headers(fd);
+        http_send_string(fd,
+                         "<center>"
+                         "<h1>Welcome to httpserver!</h1>"
+                         "<hr>"
+                         "<p>Nothing's here yet.</p>"
+                         "</center>");
+
         // Check if the path is a file
         if (S_ISREG(pathStat.st_mode)) {
             printf("file\n");
         } else if (S_ISDIR(pathStat.st_mode)) {
             // Check if the directory contains "index.html"
-            char indexPath[256];  // Adjust the size as needed
-            snprintf(indexPath, sizeof(indexPath), "%s/index.html", fullpath);
+            char indexPath[FILENAME_MAX + 11];  // Adjust the size as needed
+            sprintf(indexPath, "%s/index.html", fullpath);
             struct stat indexStat;
 
             if (stat(indexPath, &indexStat) == 0 && S_ISREG(indexStat.st_mode)) {
@@ -167,7 +177,17 @@ void handle_files_request(int fd) {
             }
         }
     } else {
-        printf("404\n");
+        http_start_response(fd, 404);
+        http_send_header(fd, "Content-Type", "text/html");
+        http_end_headers(fd);
+        // Show 404 error and add back to home link
+        http_send_string(fd,
+                         "<center>"
+                         "<h1>404 Not Found</h1>"
+                         "<hr>"
+                         "<p>Nothing's here yet.</p>"
+                         "<p><a href=\"/\">Back to home</a></p>"
+                         "</center>");
     }
 
 
@@ -180,21 +200,8 @@ void handle_files_request(int fd) {
      * on `path`.
      *
      * Feel FREE to delete/modify anything on this function.
-     */
-
-
-    http_start_response(fd, 200);
-    http_send_header(fd, "Content-Type", "text/html");
-    http_end_headers(fd);
-    http_send_string(fd,
-                     "<center>"
-                     "<h1>Welcome to httpserver!</h1>"
-                     "<hr>"
-                     "<p>Nothing's here yet.</p>"
-                     "</center>");
-
+     * */
     close(fd);
-    return;
 }
 
 
