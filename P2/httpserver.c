@@ -40,11 +40,7 @@ int server_proxy_port;
  * ATTENTION: Be careful to optimize your code. Judge is
  *            sesnsitive to time-out errors.
  */
-void serve_file(int fd, char *path) {
-    struct stat st;
-    stat(path, &st);
-    long size = (long) st.st_size;
-
+void serve_file(int fd, char *path, long size) {
     char content_length[20];
     sprintf(content_length, "%ld", size);
 
@@ -153,20 +149,19 @@ void handle_files_request(int fd) {
 
     // Check if the path exists
     if (stat(fullpath, &pathStat) == 0) {
-        http_start_response(fd, 200);
-        http_send_header(fd, "Content-Type", "text/html");
-        http_end_headers(fd);
-        http_send_string(fd,
-                         "<center>"
-                         "<h1>Welcome to httpserver!</h1>"
-                         "<hr>"
-                         "<p>Nothing's here yet.</p>"
-                         "</center>");
-
         // Check if the path is a file
         if (S_ISREG(pathStat.st_mode)) {
-            printf("file\n");
+            serve_file(fd, fullpath, (long) pathStat.st_size);
         } else if (S_ISDIR(pathStat.st_mode)) {
+            http_start_response(fd, 200);
+            http_send_header(fd, "Content-Type", "text/html");
+            http_end_headers(fd);
+            http_send_string(fd,
+                             "<center>"
+                             "<h1>Welcome to httpserver!</h1>"
+                             "<hr>"
+                             "<p>You are in directory listing.</p>"
+                             "</center>");
             // Check if the directory contains "index.html"
             char indexPath[FILENAME_MAX + 11];  // Adjust the size as needed
             sprintf(indexPath, "%s/index.html", fullpath);
