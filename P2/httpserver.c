@@ -149,6 +149,8 @@ void handle_files_request(int fd) {
     char fullpath[FILENAME_MAX];
     sprintf(fullpath, "./%s/%s", server_files_directory, request->path);
 
+    printf("requested: %s\n", fullpath);
+
     // Check if the path exists
     if (stat(fullpath, &pathStat) == 0) {
         http_start_response(fd, 200);
@@ -185,7 +187,7 @@ void handle_files_request(int fd) {
                          "<center>"
                          "<h1>404 Not Found</h1>"
                          "<hr>"
-                         "<p>Nothing's here yet.</p>"
+                         "<p>Nothing is here yet.</p>"
                          "<p><a href=\"/\">Back to home</a></p>"
                          "</center>");
     }
