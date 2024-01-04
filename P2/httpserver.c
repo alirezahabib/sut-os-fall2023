@@ -40,9 +40,9 @@ int server_proxy_port;
  * ATTENTION: Be careful to optimize your code. Judge is
  *            sesnsitive to time-out errors.
  */
-void serve_file(int fd, char *path, long size) {
+void serve_file(int fd, char *path, off_t size) {
     char content_length[20];
-    sprintf(content_length, "%ld", size);
+    sprintf(content_length, "%ld", (long) size);
 
     http_start_response(fd, 200);
     http_send_header(fd, "Content-Type", http_get_mime_type(path));
@@ -139,20 +139,20 @@ void handle_files_request(int fd) {
         return;
     }
 
-    struct stat pathStat;
+    struct stat path_stat;
 
     // Append server_files_directory to the beginning of the given path
-    char fullpath[FILENAME_MAX];
-    sprintf(fullpath, "./%s/%s", server_files_directory, request->path);
+    char full_path[FILENAME_MAX];
+    sprintf(full_path, "./%s/%s", server_files_directory, request->path);
 
-    printf("requested: %s\n", fullpath);
+    printf("requested: %s\n", full_path);
 
     // Check if the path exists
-    if (stat(fullpath, &pathStat) == 0) {
+    if (stat(full_path, &path_stat) == 0) {
         // Check if the path is a file
-        if (S_ISREG(pathStat.st_mode)) {
-            serve_file(fd, fullpath, (long) pathStat.st_size);
-        } else if (S_ISDIR(pathStat.st_mode)) {
+        if (S_ISREG(path_stat.st_mode)) {
+            serve_file(fd, full_path, path_stat.st_size);
+        } else if (S_ISDIR(path_stat.st_mode)) {
             http_start_response(fd, 200);
             http_send_header(fd, "Content-Type", "text/html");
             http_end_headers(fd);
@@ -164,11 +164,11 @@ void handle_files_request(int fd) {
                              "</center>");
             // Check if the directory contains "index.html"
             char indexPath[FILENAME_MAX + 11];  // Adjust the size as needed
-            sprintf(indexPath, "%s/index.html", fullpath);
+            sprintf(indexPath, "%s/index.html", full_path);
             struct stat indexStat;
 
             if (stat(indexPath, &indexStat) == 0 && S_ISREG(indexStat.st_mode)) {
-                printf("%s\n", indexPath);
+                serve_file(fd, indexPath, indexStat.st_size);
             } else {
                 printf("no index.html\n");
             }
