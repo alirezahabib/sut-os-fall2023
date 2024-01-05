@@ -48,7 +48,6 @@ void serve_file(int fd, char *path, off_t size) {
     http_start_response(fd, 200);
     http_send_header(fd, "Content-Type", http_get_mime_type(path));
     http_send_header(fd, "Content-Length", content_length);
-    printf("Content-Length: %s\n", content_length);
     http_end_headers(fd);
 
     int file_fd = open(path, O_RDONLY);
@@ -297,7 +296,6 @@ void init_thread_pool(int pool_num_threads, void (*request_handler)(int)) {
  * connection, calls request_handler with the accepted fd number.
  */
 _Noreturn void serve_forever(int *socket_number, void (*request_handler)(int)) {
-
     struct sockaddr_in server_address, client_address;
     size_t client_address_length = sizeof(client_address);
     int client_socket_number;
