@@ -24,7 +24,8 @@
  * handle_proxy_request. Their values are set up in main() using the
  * command line arguments (already implemented for you).
  */
-#define MAX_DIR_LENGTH 50
+#define MAX_DIR_COUNT 50
+#define MAX_PROXY_RESPONSE_SIZE 10000
 wq_t work_queue;
 int num_threads;
 int server_port;
@@ -34,11 +35,11 @@ int server_proxy_port;
 
 /*
  * Serves the contents the file stored at `path` to the client socket `fd`.
- * It is the caller's reponsibility to ensure that the file stored at `path` exists.
+ * It is the caller's responsibility to ensure that the file stored at `path` exists.
  * You can change these functions to anything you want.
  * 
  * ATTENTION: Be careful to optimize your code. Judge is
- *            sesnsitive to time-out errors.
+ *            sensitive to time-out errors.
  */
 void serve_file(int fd, char *path, off_t size) {
     char content_length[20];
@@ -50,6 +51,7 @@ void serve_file(int fd, char *path, off_t size) {
     http_end_headers(fd);
 
     int file_fd = open(path, O_RDONLY);
+    // I will exceptionally use malloc here because the file size may be too large
     char *buffer = malloc(size + 1);
     read(file_fd, buffer, size);
     buffer[size] = '\0';
@@ -65,18 +67,16 @@ void serve_directory(int fd, char *path) {
     http_send_header(fd, "Content-Type", http_get_mime_type(".html"));
     http_end_headers(fd);
 
-    // Open the directory
     DIR *dir = opendir(path);
 
-    // Start building the HTML response
-    char *response = malloc(FILENAME_MAX * sizeof(char) * (MAX_DIR_LENGTH * 2 + 100));
-
+    // Start building the response
+    char response[(FILENAME_MAX * 2 + 100) * MAX_DIR_COUNT];
     sprintf(response, "<html><head><title>Content of directory</title></head><body><h2>Content of %s</h2><ul>", path);
 
     // Read the directory contents
     struct dirent *entry;
     int entry_count = 0;
-    while ((entry = readdir(dir)) != NULL && entry_count < MAX_DIR_LENGTH) {
+    while ((entry = readdir(dir)) != NULL && entry_count < MAX_DIR_COUNT) {
         // Skip "." and ".."
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
 
@@ -155,7 +155,6 @@ void handle_files_request(int fd) {
         http_start_response(fd, 404);
         http_send_header(fd, "Content-Type", "text/html");
         http_end_headers(fd);
-        // Show 404 error and add back to home link
         http_send_string(fd,
                          "<center>"
                          "<h1>404 Not Found</h1>"
@@ -170,25 +169,21 @@ void handle_files_request(int fd) {
 typedef struct proxy_object {
     int src_socket;
     int dst_socket;
-    int alive;
+    int is_alive;
     pthread_cond_t *cond;
 } proxy_object;
 
-void send_to_client(int dst, int src) {
-    void *buffer = malloc(10000);
+void *proxy_handler(void *args) {
+    proxy_object *proxy = (proxy_object *) args;
+
+    char buffer[MAX_PROXY_RESPONSE_SIZE];
     size_t size;
-    while ((size = read(src, buffer, 10000)) > 0)
-        http_send_data(dst, buffer, size);
+    while ((size = read(proxy->src_socket, buffer, MAX_PROXY_RESPONSE_SIZE)) > 0)
+        http_send_data(proxy->dst_socket, buffer, size);
 
-    free(buffer);
-}
-
-void *run_proxy(void *args) {
-    proxy_object *pstatus = (proxy_object *) args;
-    send_to_client(pstatus->dst_socket, pstatus->src_socket);
-    pstatus->alive = 0;
-    pthread_cond_signal(pstatus->cond);
-    return NULL;
+    proxy->is_alive = 0;
+    pthread_cond_signal(proxy->cond);
+    return 0;
 }
 
 
@@ -256,23 +251,22 @@ void handle_proxy_request(int fd) {
     proxy_object proxy_request = {
             .src_socket = fd,
             .dst_socket = target_fd,
-            .alive = 1,
+            .is_alive = 1,
             .cond = &cond
     };
-
     proxy_object proxy_response = {
             .src_socket = target_fd,
             .dst_socket = fd,
-            .alive = 1,
+            .is_alive = 1,
             .cond = &cond
     };
 
     pthread_t request_thread, response_thread;
 
-    pthread_create(&request_thread, NULL, run_proxy, &proxy_request);
-    pthread_create(&response_thread, NULL, run_proxy, &proxy_response);
+    pthread_create(&request_thread, NULL, proxy_handler, &proxy_request);
+    pthread_create(&response_thread, NULL, proxy_handler, &proxy_response);
 
-    while (proxy_request.alive && proxy_response.alive) pthread_cond_wait(&cond, &mutex);
+    while (proxy_request.is_alive && proxy_response.is_alive) pthread_cond_wait(&cond, &mutex);
 
     pthread_cancel(request_thread);
     pthread_cancel(response_thread);
@@ -283,16 +277,16 @@ void handle_proxy_request(int fd) {
     close(target_fd);
 }
 
-void *thread_handler(void *args) {
+_Noreturn void *thread_handler(void *args) {
     void (*func)(int) = args;
     while (1) func(wq_pop(&work_queue));
 }
 
-void init_thread_pool(int num_threads, void (*request_handler)(int)) {
+void init_thread_pool(int pool_num_threads, void (*request_handler)(int)) {
     wq_init(&work_queue);
 
-    pthread_t threads[num_threads];
-    for (int i = 0; i < num_threads; i++)
+    pthread_t threads[pool_num_threads];
+    for (int i = 0; i < pool_num_threads; i++)
         pthread_create(&threads[i], NULL, thread_handler, request_handler);
 }
 
@@ -301,7 +295,7 @@ void init_thread_pool(int num_threads, void (*request_handler)(int)) {
  * the fd number of the server socket in *socket_number. For each accepted
  * connection, calls request_handler with the accepted fd number.
  */
-void serve_forever(int *socket_number, void (*request_handler)(int)) {
+_Noreturn void serve_forever(int *socket_number, void (*request_handler)(int)) {
 
     struct sockaddr_in server_address, client_address;
     size_t client_address_length = sizeof(client_address);
@@ -353,9 +347,8 @@ void serve_forever(int *socket_number, void (*request_handler)(int)) {
                inet_ntoa(client_address.sin_addr),
                client_address.sin_port);
 
-        if (num_threads != 0) {
-            wq_push(&work_queue, client_socket_number);
-        } else {
+        if (num_threads != 0) wq_push(&work_queue, client_socket_number);
+        else {
             request_handler(client_socket_number);
             close(client_socket_number);
         }
