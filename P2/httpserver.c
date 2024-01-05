@@ -48,6 +48,7 @@ void serve_file(int fd, char *path, off_t size) {
     http_start_response(fd, 200);
     http_send_header(fd, "Content-Type", http_get_mime_type(path));
     http_send_header(fd, "Content-Length", content_length);
+    printf("Content-Length: %s\n", content_length);
     http_end_headers(fd);
 
     int file_fd = open(path, O_RDONLY);
